@@ -343,9 +343,12 @@
       <i class="ti ti-camera-off"></i>
       Cámara inactiva
     </div>
-    <div style="margin-top:12px;">
+    <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
       <button class="btn btn-primary" id="btn-cam" onclick="toggleCamera()">
         <i class="ti ti-camera"></i> Activar cámara
+      </button>
+      <button class="btn btn-cam-stop" id="btn-switch" onclick="switchCamera()" style="display:none;">
+        <i class="ti ti-camera-rotate"></i> Cambiar cámara
       </button>
     </div>
     <div class="manual-row">
@@ -481,31 +484,101 @@
     }).join('');
   }
 
+  let allCameras = [];
+  let currentCamIdx = 0;
+
+  async function loadCameras() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      allCameras = devices.filter(d => d.kind === 'videoinput');
+      // Preferir cámara trasera primero
+      allCameras.sort((a, b) => {
+        const aBack = /back|rear|environment|trasera/i.test(a.label);
+        const bBack = /back|rear|environment|trasera/i.test(b.label);
+        return bBack - aBack;
+      });
+    } catch { allCameras = []; }
+  }
+
+  async function startStream(deviceId) {
+    const constraints = deviceId
+      ? { video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
+      : { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
+    return await navigator.mediaDevices.getUserMedia(constraints);
+  }
+
   async function toggleCamera() {
     const btn = document.getElementById('btn-cam');
+    const btnSwitch = document.getElementById('btn-switch');
     const vw = document.getElementById('video-wrap');
     const ph = document.getElementById('cam-placeholder');
+
     if (stream) {
       stream.getTracks().forEach(t => t.stop());
       stream = null; scanning = false;
       vw.style.display = 'none'; ph.style.display = '';
       btn.className = 'btn btn-primary';
       btn.innerHTML = '<i class="ti ti-camera"></i> Activar cámara';
+      if (btnSwitch) btnSwitch.style.display = 'none';
       return;
     }
+
+    toast('Iniciando cámara...', 1500);
+    await loadCameras();
+
+    // Intentar primero con deviceId específico, luego fallbacks
+    let started = false;
+    const attempts = [];
+
+    if (allCameras.length > 0) {
+      attempts.push(() => startStream(allCameras[0].deviceId));
+    }
+    attempts.push(() => startStream(null)); // facingMode environment
+    attempts.push(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }));
+    attempts.push(() => navigator.mediaDevices.getUserMedia({ video: true })); // cualquier cámara
+
+    for (const attempt of attempts) {
+      try {
+        stream = await attempt();
+        started = true;
+        break;
+      } catch (e) { stream = null; }
+    }
+
+    if (!started) {
+      toast('Sin acceso a cámara — usa el campo manual', 3500);
+      return;
+    }
+
+    const vid = document.getElementById('video');
+    vid.srcObject = stream;
+    await vid.play().catch(() => {});
+    vw.style.display = ''; ph.style.display = 'none';
+    btn.className = 'btn btn-cam-stop';
+    btn.innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
+
+    if (allCameras.length > 1 && btnSwitch) btnSwitch.style.display = '';
+
+    scanning = true;
+    detect(vid);
+  }
+
+  async function switchCamera() {
+    if (!stream || allCameras.length < 2) return;
+    currentCamIdx = (currentCamIdx + 1) % allCameras.length;
+    stream.getTracks().forEach(t => t.stop());
+    stream = null; scanning = false;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-      });
+      stream = await startStream(allCameras[currentCamIdx].deviceId);
       const vid = document.getElementById('video');
       vid.srcObject = stream;
-      vw.style.display = ''; ph.style.display = 'none';
-      btn.className = 'btn btn-cam-stop';
-      btn.innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
+      await vid.play().catch(() => {});
       scanning = true;
       detect(vid);
+      const label = allCameras[currentCamIdx].label || `Cámara ${currentCamIdx + 1}`;
+      toast('↺ ' + label.substring(0, 30), 2000);
     } catch {
-      toast('Sin acceso a cámara — usa el campo manual', 3500);
+      toast('No se pudo cambiar de cámara', 2500);
     }
   }
 
