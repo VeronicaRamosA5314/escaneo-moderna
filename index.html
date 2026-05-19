@@ -9,7 +9,7 @@
 <title>Escaneo de Pedidos — Moderna México</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -235,44 +235,32 @@ let mode = 'live';
 let accessToken = null;
 let tokenClient = null;
 
-// ── GOOGLE IDENTITY ───────────────────────────────────────────
-function initGoogleAuth() {
-  if (typeof google === 'undefined') {
-    setTimeout(initGoogleAuth, 500);
-    return;
-  }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: (resp) => {
-      if (resp.error) {
-        showDriveStatus('Error al iniciar sesión: ' + resp.error, 'err');
-        return;
-      }
-      accessToken = resp.access_token;
-      fetchUserInfo();
-    }
-  });
-}
-window.addEventListener('load', initGoogleAuth);
+// ── GOOGLE IDENTITY (flujo redirect) ─────────────────────────
+const REDIRECT_URI = 'https://veronicaramosa5314.github.io/escaneo-moderna/';
 
 function signIn() {
-  if (!tokenClient) {
-    showDriveStatus('Google aún cargando — espera un momento e intenta de nuevo', 'err');
-    return;
+  // Guardar escaneos actuales antes de redirigir
+  if (scans.length > 0) {
+    sessionStorage.setItem('scans_backup', JSON.stringify(scans));
+    sessionStorage.setItem('pedido_backup', document.getElementById('pedido-num').value);
   }
-  try {
-    tokenClient.requestAccessToken({ prompt: '' });
-  } catch(e) {
-    showDriveStatus('Error al iniciar sesión: ' + e.message, 'err');
-  }
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'token',
+    scope: SCOPES,
+    include_granted_scopes: 'true'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
 }
 
 function signOut() {
   if (accessToken) {
-    try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch {}
+    try { fetch('https://accounts.google.com/o/oauth2/revoke?token=' + accessToken); } catch {}
   }
   accessToken = null;
+  sessionStorage.removeItem('google_token');
+  sessionStorage.removeItem('google_email');
   document.getElementById('drive-signin-section').style.display = '';
   document.getElementById('drive-loggedin-section').style.display = 'none';
   document.getElementById('drive-status').style.display = 'none';
@@ -285,15 +273,57 @@ async function fetchUserInfo() {
     });
     const info = await r.json();
     if (info.error) throw new Error(info.error.message);
-    document.getElementById('user-email').textContent = info.email || 'Sesión iniciada';
+    const email = info.email || 'Sesión iniciada';
+    sessionStorage.setItem('google_token', accessToken);
+    sessionStorage.setItem('google_email', email);
+    document.getElementById('user-email').textContent = email;
     document.getElementById('drive-signin-section').style.display = 'none';
     document.getElementById('drive-loggedin-section').style.display = '';
     document.getElementById('btn-drive').disabled = scans.length === 0;
-    toast('✓ Sesión iniciada como ' + (info.email || 'Google'), 2500);
+    toast('✓ Sesión iniciada', 2000);
   } catch(e) {
     showDriveStatus('No se pudo verificar la sesión: ' + e.message, 'err');
   }
 }
+
+// Al cargar la página — revisar si venimos de redirect de Google o si hay sesión guardada
+window.addEventListener('load', () => {
+  // Restaurar escaneos si los había antes del redirect
+  const backup = sessionStorage.getItem('scans_backup');
+  const pedidoBackup = sessionStorage.getItem('pedido_backup');
+  if (backup) {
+    try { scans = JSON.parse(backup); render(); } catch {}
+    sessionStorage.removeItem('scans_backup');
+  }
+  if (pedidoBackup) {
+    document.getElementById('pedido-num').value = pedidoBackup;
+    sessionStorage.removeItem('pedido_backup');
+  }
+
+  // Revisar token en el hash de la URL (viene de Google redirect)
+  const hash = window.location.hash.substring(1);
+  if (hash) {
+    const params = new URLSearchParams(hash);
+    const token = params.get('access_token');
+    if (token) {
+      accessToken = token;
+      history.replaceState(null, '', window.location.pathname);
+      fetchUserInfo();
+      return;
+    }
+  }
+
+  // Revisar sesión guardada en sessionStorage
+  const savedToken = sessionStorage.getItem('google_token');
+  const savedEmail = sessionStorage.getItem('google_email');
+  if (savedToken && savedEmail) {
+    accessToken = savedToken;
+    document.getElementById('user-email').textContent = savedEmail;
+    document.getElementById('drive-signin-section').style.display = 'none';
+    document.getElementById('drive-loggedin-section').style.display = '';
+    document.getElementById('btn-drive').disabled = scans.length === 0;
+  }
+});
 
 // ── GOOGLE DRIVE UPLOAD ───────────────────────────────────────
 async function getOrCreateFolder() {
