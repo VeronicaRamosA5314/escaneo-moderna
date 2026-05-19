@@ -5,31 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Surtido Moderna" />
 <title>Escaneo de Pedidos — Moderna México</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/zxing-wasm@1.3.0/dist/iife/zxing-wasm.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f4f3ef;
-    --surface: #ffffff;
-    --surface2: #eeede9;
-    --border: rgba(0,0,0,0.10);
-    --border2: rgba(0,0,0,0.18);
-    --text: #1a1a18;
-    --text2: #6b6b65;
-    --text3: #a8a8a2;
-    --accent: #1a5c3a;
-    --accent-light: #e8f2ec;
-    --accent-text: #0f3d26;
-    --danger: #c0392b;
-    --danger-light: #fdf0ee;
-    --mono: 'Courier New', monospace;
-    --radius: 12px;
-    --radius-sm: 8px;
+    --bg: #f4f3ef; --surface: #ffffff; --surface2: #eeede9;
+    --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --text2: #6b6b65; --text3: #a8a8a2;
+    --accent: #1a5c3a; --accent-light: #e8f2ec; --accent-text: #0f3d26;
+    --danger: #c0392b; --danger-light: #fdf0ee;
+    --mono: 'Courier New', monospace; --radius: 12px; --radius-sm: 8px;
   }
   body { font-family: 'Georgia', serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 2rem; }
   header { background: var(--accent); color: #fff; padding: 1.25rem 1.25rem 1rem; position: sticky; top: 0; z-index: 100; }
@@ -38,48 +27,46 @@
   .main { padding: 1rem; display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
   .card { background: var(--surface); border-radius: var(--radius); border: 0.5px solid var(--border); padding: 1rem 1.1rem; }
   .card-title { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); font-family: var(--mono); margin-bottom: 10px; }
+
+  /* Pedido */
   .pedido-row { display: flex; align-items: stretch; }
   .pedido-prefix { background: var(--surface2); border: 0.5px solid var(--border2); border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); padding: 0 12px; display: flex; align-items: center; font-family: var(--mono); font-size: 15px; color: var(--text2); white-space: nowrap; }
   .pedido-prefix span { color: var(--accent); font-weight: bold; }
-  #pedido-num { flex: 1; border: 0.5px solid var(--border2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 12px; font-family: var(--mono); font-size: 16px; color: var(--text); background: var(--surface); outline: none; -webkit-appearance: none; appearance: none; }
+  #pedido-num { flex: 1; border: 0.5px solid var(--border2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 12px; font-family: var(--mono); font-size: 16px; color: var(--text); background: var(--surface); outline: none; -webkit-appearance: none; }
   #pedido-num:focus { border-color: var(--accent); }
 
-  /* Zona de escaneo con cámara en vivo */
-  #cam-section { display: flex; flex-direction: column; gap: 10px; }
+  /* Cámara */
   #video-wrap { width: 100%; background: #000; border-radius: var(--radius-sm); position: relative; overflow: hidden; display: none; }
   #video { width: 100%; height: 260px; display: block; object-fit: cover; }
-  #canvas-hidden { display: none; }
-  .scan-line-anim { position: absolute; left: 8%; right: 8%; height: 2px; background: #ff3b30; top: 40%; animation: sweep 1.8s ease-in-out infinite; pointer-events: none; }
+  .scan-line-anim { position: absolute; left: 8%; right: 8%; height: 2px; background: #ff3b30; top: 40%; animation: sweep 1.8s ease-in-out infinite; pointer-events: none; box-shadow: 0 0 6px rgba(255,59,48,0.7); }
+  .cam-frame { position: absolute; left: 8%; right: 8%; top: 12%; bottom: 12%; border: 2px solid rgba(255,255,255,0.55); border-radius: 6px; pointer-events: none; }
   @keyframes sweep { 0%,100% { top: 20%; } 50% { top: 75%; } }
-  .cam-frame { position: absolute; left: 8%; right: 8%; top: 15%; bottom: 15%; border: 2px solid rgba(255,255,255,0.6); border-radius: 6px; pointer-events: none; }
-
-  #cam-placeholder { width: 100%; min-height: 140px; background: var(--surface2); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text3); font-size: 14px; font-family: var(--mono); }
+  #cam-placeholder { width: 100%; min-height: 130px; background: var(--surface2); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text3); font-size: 14px; font-family: var(--mono); }
   #cam-placeholder i { font-size: 36px; }
 
+  /* Botones */
   .btn { width: 100%; padding: 13px 16px; border-radius: var(--radius-sm); font-size: 15px; font-family: 'Georgia', serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0.5px solid var(--border2); transition: opacity 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
   .btn:active { transform: scale(0.98); opacity: 0.85; }
   .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn-secondary { background: var(--surface2); color: var(--text); }
-  .btn-send { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-drive { background: #1a73e8; color: #fff; border-color: #1a73e8; font-size: 15px; }
+  .btn-drive:disabled { opacity: 0.35; cursor: not-allowed; }
   .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+  .btn-sm { padding: 8px 12px; font-size: 13px; width: auto; }
 
-  /* Escáner foto (fallback) */
-  #file-input { display: none; }
-  .scan-status { text-align: center; font-family: var(--mono); font-size: 13px; padding: 8px; border-radius: var(--radius-sm); }
-  .scan-status.ok { background: var(--accent-light); color: var(--accent-text); }
-  .scan-status.err { background: var(--danger-light); color: var(--danger); }
-
+  /* Manual */
   .manual-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--border); }
   .manual-row input { flex: 1; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--mono); font-size: 14px; background: var(--surface); color: var(--text); outline: none; }
   .manual-row input:focus { border-color: var(--accent); }
   .btn-add { background: var(--accent-light); border: 0.5px solid var(--accent); color: var(--accent-text); border-radius: var(--radius-sm); padding: 10px 16px; font-size: 20px; cursor: pointer; display: flex; align-items: center; -webkit-tap-highlight-color: transparent; }
 
+  /* Stats */
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px; text-align: center; }
   .stat-num { font-size: 28px; color: var(--accent); }
   .stat-label { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; letter-spacing: 0.04em; }
 
+  /* Lista */
   .list-wrap { max-height: 280px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .scan-item { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 0.5px solid var(--border); animation: fadeIn 0.2s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
@@ -91,10 +78,27 @@
   .empty { text-align: center; padding: 2rem 1rem; color: var(--text3); font-family: var(--mono); font-size: 13px; line-height: 1.6; }
   .empty i { font-size: 32px; display: block; margin-bottom: 8px; }
 
-  .email-chip { display: flex; align-items: center; gap: 8px; background: var(--accent-light); border: 0.5px solid rgba(26,92,58,0.25); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--mono); font-size: 13px; color: var(--accent-text); margin-bottom: 12px; }
+  /* Drive status */
+  .drive-status { font-family: var(--mono); font-size: 13px; padding: 10px 12px; border-radius: var(--radius-sm); margin-top: 10px; display: none; line-height: 1.5; }
+  .drive-status.ok { background: var(--accent-light); color: var(--accent-text); }
+  .drive-status.err { background: var(--danger-light); color: var(--danger); }
+  .drive-status.loading { background: var(--surface2); color: var(--text2); }
+
+  /* Google sign-in chip */
+  .google-chip { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 10px; font-size: 13px; font-family: var(--mono); color: var(--text2); }
+  .google-chip i { font-size: 18px; color: var(--accent); }
+  .google-chip .user-email { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn-signout { background: none; border: none; color: var(--text3); font-size: 12px; cursor: pointer; text-decoration: underline; font-family: var(--mono); padding: 0; }
 
   #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-family: var(--mono); opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; white-space: nowrap; z-index: 999; max-width: 90vw; text-align: center; }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Foto fallback */
+  #file-input { display: none; }
+  .scan-photo-status { font-family: var(--mono); font-size: 13px; padding: 8px; border-radius: var(--radius-sm); margin-top: 8px; display: none; }
+  .scan-photo-status.ok { background: var(--accent-light); color: var(--accent-text); }
+  .scan-photo-status.err { background: var(--danger-light); color: var(--danger); }
+
   .mode-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
   .tab { flex: 1; padding: 8px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: 13px; font-family: var(--mono); cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent; }
   .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -103,6 +107,7 @@
 </style>
 </head>
 <body>
+
 <header>
   <h1><i class="ti ti-scan"></i> Escaneo de Pedidos</h1>
   <p>MODERNA MÉXICO — SURTIDO</p>
@@ -110,6 +115,7 @@
 
 <div class="main">
 
+  <!-- Pedido -->
   <div class="card">
     <p class="card-title">Número de pedido</p>
     <div class="pedido-row">
@@ -118,62 +124,58 @@
     </div>
   </div>
 
+  <!-- Escáner -->
   <div class="card">
     <p class="card-title">Escáner</p>
     <div class="mode-tabs">
-      <div class="tab active" id="tab-live" onclick="setMode('live')"><i class="ti ti-video"></i> Cámara en vivo</div>
+      <div class="tab active" id="tab-live" onclick="setMode('live')"><i class="ti ti-video"></i> En vivo</div>
       <div class="tab" id="tab-photo" onclick="setMode('photo')"><i class="ti ti-camera"></i> Foto</div>
     </div>
 
-    <div id="cam-section">
-      <!-- MODO EN VIVO -->
-      <div id="live-section">
-        <div id="video-wrap">
-          <video id="video" autoplay playsinline muted webkit-playsinline></video>
-          <canvas id="canvas-hidden"></canvas>
-          <div class="cam-frame"></div>
-          <div class="scan-line-anim"></div>
-        </div>
-        <div id="cam-placeholder">
-          <i class="ti ti-camera-off"></i>
-          Toca "Activar" para iniciar
-        </div>
-        <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
-          <button class="btn btn-primary" id="btn-cam" onclick="toggleCamera()">
-            <i class="ti ti-camera"></i> Activar cámara
-          </button>
-          <button class="btn btn-secondary" id="btn-switch" onclick="switchCam()" style="display:none;">
-            <i class="ti ti-camera-rotate"></i> Cambiar cámara
-          </button>
-        </div>
+    <!-- Modo en vivo -->
+    <div id="live-section">
+      <div id="video-wrap">
+        <video id="video" autoplay playsinline muted webkit-playsinline></video>
+        <div class="cam-frame"></div>
+        <div class="scan-line-anim"></div>
       </div>
-
-      <!-- MODO FOTO -->
-      <div id="photo-section" style="display:none;">
-        <input type="file" id="file-input" accept="image/*" capture="environment" onchange="processPhoto(this)" />
-        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
-          <i class="ti ti-camera"></i> Tomar foto del código
+      <div id="cam-placeholder">
+        <i class="ti ti-camera-off"></i>
+        Toca "Activar" para iniciar
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+        <button class="btn btn-primary" id="btn-cam" onclick="toggleCamera()">
+          <i class="ti ti-camera"></i> Activar cámara
         </button>
-        <div id="scan-status" style="display:none; margin-top:8px;"></div>
-        <div id="photo-preview" style="margin-top:8px; display:none;">
-          <img id="preview-img" style="width:100%; border-radius:var(--radius-sm);" />
-        </div>
+        <button class="btn btn-secondary" id="btn-switch" onclick="switchCam()" style="display:none;">
+          <i class="ti ti-camera-rotate"></i> Cambiar cámara
+        </button>
       </div>
     </div>
 
+    <!-- Modo foto -->
+    <div id="photo-section" style="display:none;">
+      <input type="file" id="file-input" accept="image/*" capture="environment" onchange="processPhoto(this)" />
+      <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+        <i class="ti ti-camera"></i> Tomar foto del código
+      </button>
+      <div id="scan-photo-status" class="scan-photo-status"></div>
+    </div>
+
+    <!-- Manual -->
     <div class="manual-row">
       <input type="text" id="manual-code" placeholder="O escribe el código aquí..." />
-      <button class="btn-add" onclick="addManual()" aria-label="Agregar">
-        <i class="ti ti-plus"></i>
-      </button>
+      <button class="btn-add" onclick="addManual()"><i class="ti ti-plus"></i></button>
     </div>
   </div>
 
+  <!-- Stats -->
   <div class="stats">
     <div class="stat"><div class="stat-num" id="count-total">0</div><div class="stat-label">PIEZAS</div></div>
     <div class="stat"><div class="stat-num" id="count-unique">0</div><div class="stat-label">PRODUCTOS ÚNICOS</div></div>
   </div>
 
+  <!-- Lista -->
   <div class="card">
     <p class="card-title">Códigos capturados</p>
     <div class="list-wrap" id="scan-list">
@@ -184,23 +186,44 @@
     </button>
   </div>
 
+  <!-- Google Drive -->
   <div class="card">
-    <p class="card-title">Envío por correo</p>
-    <div class="email-chip"><i class="ti ti-mail" style="font-size:16px;"></i> surtido.mexico@moderna.com</div>
-    <button class="btn btn-send" id="btn-send" onclick="sendEmail()" disabled>
-      <i class="ti ti-mail-forward"></i> Enviar Excel por correo
-    </button>
-    <p style="font-size:12px;color:var(--text3);margin-top:8px;text-align:center;font-family:var(--mono);">
-      Se descarga el .xlsx y se abre tu app de correo
-    </p>
+    <p class="card-title">Guardar en Google Drive</p>
+
+    <!-- Estado sin sesión -->
+    <div id="drive-signin-section">
+      <p style="font-size:13px;color:var(--text2);font-family:var(--mono);margin-bottom:10px;">
+        Inicia sesión con Google para subir el archivo directo a Drive.
+      </p>
+      <button class="btn btn-primary" onclick="signIn()">
+        <i class="ti ti-brand-google"></i> Iniciar sesión con Google
+      </button>
+    </div>
+
+    <!-- Estado con sesión -->
+    <div id="drive-loggedin-section" style="display:none;">
+      <div class="google-chip">
+        <i class="ti ti-brand-google"></i>
+        <span class="user-email" id="user-email"></span>
+        <button class="btn-signout" onclick="signOut()">Salir</button>
+      </div>
+      <button class="btn btn-drive" id="btn-drive" onclick="uploadToDrive()" disabled>
+        <i class="ti ti-brand-google-drive"></i> Subir Excel a Drive
+      </button>
+      <div class="drive-status" id="drive-status"></div>
+    </div>
   </div>
 
 </div>
 <div id="toast"></div>
 
 <script>
-const DEST = 'surtido.mexico@moderna.com';
-const PREFIX = 'BMXK';
+// ── CONFIG ────────────────────────────────────────────────────
+const CLIENT_ID = '299307750154-f1rt8db9o9jqosao603n5dpuolf9u0lb.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const FOLDER_NAME = 'Escaneos Moderna';
+
+// ── ESTADO ────────────────────────────────────────────────────
 let scans = [];
 let stream = null;
 let scanning = false;
@@ -209,41 +232,144 @@ let lastCodeTime = 0;
 let allCams = [];
 let camIdx = 0;
 let mode = 'live';
-let zxingReader = null;
+let accessToken = null;
+let tokenClient = null;
 
-function getPedido() {
-  const n = document.getElementById('pedido-num').value.trim();
-  return PREFIX + (n || '?????');
+// ── GOOGLE IDENTITY ───────────────────────────────────────────
+window.addEventListener('load', () => {
+  if (typeof google === 'undefined') return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { showDriveStatus('Error al iniciar sesión: ' + resp.error, 'err'); return; }
+      accessToken = resp.access_token;
+      fetchUserInfo();
+    }
+  });
+});
+
+function signIn() {
+  if (!tokenClient) { showDriveStatus('Cargando Google — intenta en un momento', 'err'); return; }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
-function toast(msg, ms = 2200) {
-  const el = document.getElementById('toast');
+function signOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  document.getElementById('drive-signin-section').style.display = '';
+  document.getElementById('drive-loggedin-section').style.display = 'none';
+  document.getElementById('drive-status').style.display = 'none';
+}
+
+async function fetchUserInfo() {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    const info = await r.json();
+    document.getElementById('user-email').textContent = info.email || 'Sesión iniciada';
+    document.getElementById('drive-signin-section').style.display = 'none';
+    document.getElementById('drive-loggedin-section').style.display = '';
+    document.getElementById('btn-drive').disabled = scans.length === 0;
+    toast('✓ Sesión iniciada', 2000);
+  } catch {
+    showDriveStatus('No se pudo verificar la sesión', 'err');
+  }
+}
+
+// ── GOOGLE DRIVE UPLOAD ───────────────────────────────────────
+async function getOrCreateFolder() {
+  // Buscar carpeta existente
+  const q = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: 'Bearer ' + accessToken }
+  });
+  const data = await r.json();
+  if (data.files && data.files.length > 0) return data.files[0].id;
+
+  // Crear carpeta si no existe
+  const cr = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  const folder = await cr.json();
+  return folder.id;
+}
+
+async function uploadToDrive() {
+  if (!accessToken) { signIn(); return; }
+  if (scans.length === 0) { toast('No hay códigos escaneados', 2000); return; }
+
+  const pedido = getPedido();
+  const fechaFile = new Date().toISOString().slice(0, 10);
+  const fname = `Escaneo_${pedido}_${fechaFile}.xlsx`;
+
+  showDriveStatus('Preparando archivo...', 'loading');
+
+  // Generar Excel
+  const ws = XLSX.utils.aoa_to_sheet([['CODIGO'], ...scans.map(c => [c])]);
+  ws['!cols'] = [{ wch: 32 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Escaneos');
+  const bytes = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  try {
+    showDriveStatus('Buscando carpeta en Drive...', 'loading');
+    const folderId = await getOrCreateFolder();
+
+    showDriveStatus('Subiendo archivo...', 'loading');
+    const metadata = JSON.stringify({ name: fname, parents: [folderId] });
+    const form = new FormData();
+    form.append('metadata', new Blob([metadata], { type: 'application/json' }));
+    form.append('file', blob);
+
+    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken },
+      body: form
+    });
+    const file = await up.json();
+
+    if (file.id) {
+      showDriveStatus(`✓ Archivo subido correctamente\n📁 Carpeta: ${FOLDER_NAME}\n📄 ${fname}`, 'ok');
+      toast('✓ Subido a Drive', 2500);
+    } else {
+      throw new Error('Sin ID de archivo');
+    }
+  } catch (e) {
+    showDriveStatus('✗ Error al subir — verifica tu conexión e intenta de nuevo', 'err');
+  }
+}
+
+function showDriveStatus(msg, type) {
+  const el = document.getElementById('drive-status');
+  el.style.display = '';
+  el.className = 'drive-status ' + type;
+  el.style.whiteSpace = 'pre-line';
   el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), ms);
 }
 
+// ── CÁMARA EN VIVO ────────────────────────────────────────────
 function setMode(m) {
   mode = m;
   document.getElementById('tab-live').className = 'tab' + (m === 'live' ? ' active' : '');
   document.getElementById('tab-photo').className = 'tab' + (m === 'photo' ? ' active' : '');
   document.getElementById('live-section').style.display = m === 'live' ? '' : 'none';
   document.getElementById('photo-section').style.display = m === 'photo' ? '' : 'none';
-  if (m === 'photo' && stream) {
-    stopCam();
-  }
+  if (m === 'photo' && stream) stopCam();
 }
 
-// ── MODO EN VIVO ──────────────────────────────────────────────
 async function toggleCamera() {
   if (stream) { stopCam(); return; }
   toast('Iniciando cámara...', 1500);
   try {
     const devs = await navigator.mediaDevices.enumerateDevices();
     allCams = devs.filter(d => d.kind === 'videoinput');
-    allCams.sort((a,b) => /back|rear|env|tras/i.test(b.label) - /back|rear|env|tras/i.test(a.label));
-  } catch(e) { allCams = []; }
+    allCams.sort((a, b) => /back|rear|env|tras/i.test(b.label) - /back|rear|env|tras/i.test(a.label));
+  } catch { allCams = []; }
 
   const tries = [];
   if (allCams.length > 0) tries.push({ video: { deviceId: { exact: allCams[0].deviceId } } });
@@ -253,10 +379,10 @@ async function toggleCamera() {
 
   for (const c of tries) {
     try { stream = await navigator.mediaDevices.getUserMedia(c); break; }
-    catch(e) { stream = null; }
+    catch { stream = null; }
   }
 
-  if (!stream) { toast('No se pudo acceder a la cámara — usa Foto o campo manual', 4000); return; }
+  if (!stream) { toast('No se pudo acceder a la cámara — usa modo Foto', 4000); return; }
 
   const vid = document.getElementById('video');
   const wrap = document.getElementById('video-wrap');
@@ -266,8 +392,6 @@ async function toggleCamera() {
 
   vid.srcObject = stream;
   vid.muted = true;
-  vid.playsInline = true;
-
   wrap.style.display = 'block';
   ph.style.display = 'none';
   btn.innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
@@ -299,14 +423,14 @@ async function switchCam() {
     stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: allCams[camIdx].deviceId } } });
     const vid = document.getElementById('video');
     vid.srcObject = stream;
-    vid.onloadedmetadata = () => { vid.play().catch(()=>{}); scanning = true; scanLoop(vid); };
+    vid.onloadedmetadata = () => { vid.play().catch(() => {}); scanning = true; scanLoop(vid); };
     toast('Cámara ' + (camIdx + 1) + ' de ' + allCams.length, 1500);
   } catch { toast('No se pudo cambiar de cámara', 2000); }
 }
 
 function scanLoop(vid) {
   if (!('BarcodeDetector' in window)) {
-    toast('Este navegador no detecta códigos en vivo — usa modo Foto', 4000);
+    toast('Navegador sin detector — usa Samsung Internet o modo Foto', 4000);
     return;
   }
   const det = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf','data_matrix','qr_code','codabar'] });
@@ -319,7 +443,7 @@ function scanLoop(vid) {
       ctx.drawImage(vid, 0, 0);
       try { const r = await det.detect(cvs); if (r.length) addCode(r[0].rawValue); } catch {}
     }
-    setTimeout(() => requestAnimationFrame(loop), 100);
+    setTimeout(() => requestAnimationFrame(loop), 150);
   })();
 }
 
@@ -327,42 +451,48 @@ function scanLoop(vid) {
 async function processPhoto(input) {
   const file = input.files[0];
   if (!file) return;
-  const status = document.getElementById('scan-status');
-  const preview = document.getElementById('photo-preview');
-  const img = document.getElementById('preview-img');
-
-  const url = URL.createObjectURL(file);
-  img.src = url;
-  preview.style.display = '';
+  const status = document.getElementById('scan-photo-status');
   status.style.display = '';
-  status.className = 'scan-status';
+  status.className = 'scan-photo-status';
   status.textContent = 'Leyendo código...';
-
   try {
     if ('BarcodeDetector' in window) {
-      const det = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf','data_matrix','qr_code','codabar'] });
+      const det = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf','data_matrix','qr_code'] });
       const bitmap = await createImageBitmap(file);
       const results = await det.detect(bitmap);
       if (results.length > 0) {
         addCode(results[0].rawValue);
-        status.className = 'scan-status ok';
-        status.textContent = '✓ Código leído: ' + results[0].rawValue;
+        status.className = 'scan-photo-status ok';
+        status.textContent = '✓ ' + results[0].rawValue;
       } else {
-        status.className = 'scan-status err';
+        status.className = 'scan-photo-status err';
         status.textContent = '✗ No se detectó código — intenta otra foto';
       }
     } else {
-      status.className = 'scan-status err';
-      status.textContent = '✗ Escribe el código manualmente abajo';
+      status.className = 'scan-photo-status err';
+      status.textContent = '✗ Escribe el código manualmente';
     }
-  } catch(e) {
-    status.className = 'scan-status err';
-    status.textContent = '✗ Error al leer — intenta de nuevo';
+  } catch {
+    status.className = 'scan-photo-status err';
+    status.textContent = '✗ Error — intenta de nuevo';
   }
   input.value = '';
 }
 
 // ── LISTA ─────────────────────────────────────────────────────
+function getPedido() {
+  const n = document.getElementById('pedido-num').value.trim();
+  return 'BMXK' + (n || '?????');
+}
+
+function toast(msg, ms = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), ms);
+}
+
 function addCode(code) {
   code = (code || '').trim();
   if (!code) return;
@@ -391,8 +521,10 @@ function render() {
   const list = document.getElementById('scan-list');
   document.getElementById('count-total').textContent = scans.length;
   document.getElementById('count-unique').textContent = new Set(scans).size;
-  document.getElementById('btn-send').disabled = scans.length === 0;
   document.getElementById('btn-clear').style.display = scans.length ? '' : 'none';
+  // Habilitar botón Drive si hay sesión
+  const btnDrive = document.getElementById('btn-drive');
+  if (btnDrive) btnDrive.disabled = scans.length === 0;
   if (!scans.length) {
     list.innerHTML = '<div class="empty"><i class="ti ti-barcode"></i>Sin escaneos aún.<br>Activa la cámara o usa<br>el campo manual.</div>';
     return;
@@ -401,29 +533,6 @@ function render() {
     const i = scans.length - 1 - ri;
     return `<div class="scan-item"><span class="item-num">${i+1}</span><span class="item-code">${c}</span><button class="item-del" onclick="deleteCode(${i})"><i class="ti ti-x"></i></button></div>`;
   }).join('');
-}
-
-// ── ENVÍO ─────────────────────────────────────────────────────
-function sendEmail() {
-  const pedido = getPedido();
-  const fecha = new Date().toLocaleDateString('es-MX');
-  const fechaFile = new Date().toISOString().slice(0,10);
-  const ws = XLSX.utils.aoa_to_sheet([['CODIGO'], ...scans.map(c => [c])]);
-  ws['!cols'] = [{ wch: 32 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Escaneos');
-  const bytes = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const fname = `Escaneo_${pedido}_${fechaFile}.xlsx`;
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = fname;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  const subj = encodeURIComponent(`Escaneo pedido ${pedido} — ${fecha}`);
-  const body = encodeURIComponent(`Hola,\n\nSe adjunta el archivo de escaneo del pedido ${pedido}.\n\nPiezas totales: ${scans.length}\nProductos únicos: ${new Set(scans).size}\n\nArchivo: ${fname}\n(Adjuntar el archivo antes de enviar)\n\nSaludos`);
-  setTimeout(() => { window.location.href = `mailto:${DEST}?subject=${subj}&body=${body}`; }, 700);
-  toast('Descargando archivo — adjúntalo al correo', 3500);
 }
 
 render();
