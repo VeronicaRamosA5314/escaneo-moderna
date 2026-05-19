@@ -236,7 +236,7 @@ let accessToken = null;
 let tokenClient = null;
 
 // ── GOOGLE IDENTITY (flujo redirect) ─────────────────────────
-const REDIRECT_URI = 'https://veronicaramosa5314.github.io/escaneo-moderna/';
+const REDIRECT_URI = window.location.origin + window.location.pathname.replace(/\/+$/, '') + '/';
 
 function signIn() {
   // Guardar escaneos actuales antes de redirigir
