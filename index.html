@@ -10,9 +10,9 @@
 <title>Escaneo de Pedidos — Moderna México</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/zxing-wasm@1.3.0/dist/iife/zxing-wasm.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
     --bg: #f4f3ef;
     --surface: #ffffff;
@@ -31,300 +31,78 @@
     --radius: 12px;
     --radius-sm: 8px;
   }
-
-  body {
-    font-family: 'Georgia', serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding-bottom: 2rem;
-  }
-
-  header {
-    background: var(--accent);
-    color: #fff;
-    padding: 1.25rem 1.25rem 1rem;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  header h1 {
-    font-size: 17px;
-    font-weight: normal;
-    letter-spacing: 0.02em;
-  }
-
-  header p {
-    font-size: 12px;
-    opacity: 0.7;
-    margin-top: 2px;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 0.05em;
-  }
-
+  body { font-family: 'Georgia', serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 2rem; }
+  header { background: var(--accent); color: #fff; padding: 1.25rem 1.25rem 1rem; position: sticky; top: 0; z-index: 100; }
+  header h1 { font-size: 17px; font-weight: normal; letter-spacing: 0.02em; }
+  header p { font-size: 12px; opacity: 0.7; margin-top: 2px; font-family: var(--mono); letter-spacing: 0.05em; }
   .main { padding: 1rem; display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
-
-  .card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    border: 0.5px solid var(--border);
-    padding: 1rem 1.1rem;
-  }
-
-  .card-title {
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text3);
-    font-family: var(--mono);
-    margin-bottom: 10px;
-  }
-
-  /* Pedido */
+  .card { background: var(--surface); border-radius: var(--radius); border: 0.5px solid var(--border); padding: 1rem 1.1rem; }
+  .card-title { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); font-family: var(--mono); margin-bottom: 10px; }
   .pedido-row { display: flex; align-items: stretch; }
-  .pedido-prefix {
-    background: var(--surface2);
-    border: 0.5px solid var(--border2);
-    border-right: none;
-    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    font-family: var(--mono);
-    font-size: 15px;
-    color: var(--text2);
-    white-space: nowrap;
-  }
-  .pedido-prefix span {
-    color: var(--accent);
-    font-weight: bold;
-  }
-  #pedido-num {
-    flex: 1;
-    border: 0.5px solid var(--border2);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    padding: 10px 12px;
-    font-family: var(--mono);
-    font-size: 16px;
-    color: var(--text);
-    background: var(--surface);
-    outline: none;
-    -webkit-appearance: none;
-    appearance: none;
-  }
+  .pedido-prefix { background: var(--surface2); border: 0.5px solid var(--border2); border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); padding: 0 12px; display: flex; align-items: center; font-family: var(--mono); font-size: 15px; color: var(--text2); white-space: nowrap; }
+  .pedido-prefix span { color: var(--accent); font-weight: bold; }
+  #pedido-num { flex: 1; border: 0.5px solid var(--border2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 12px; font-family: var(--mono); font-size: 16px; color: var(--text); background: var(--surface); outline: none; -webkit-appearance: none; appearance: none; }
   #pedido-num:focus { border-color: var(--accent); }
 
-  /* Cámara */
-  #video-wrap {
-    width: 100%;
-    border-radius: var(--radius-sm);
-    overflow: visible;
-    background: #000;
-    position: relative;
-    min-height: 250px;
-    display: none;
-  }
-  #video {
-    width: 100%;
-    height: 250px;
-    display: block;
-    object-fit: cover;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-    will-change: transform;
-    background: #000;
-  }
-  .scan-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-  }
-  .scan-frame {
-    width: 60%;
-    aspect-ratio: 3/1;
-    border: 2px solid rgba(255,255,255,0.8);
-    border-radius: 4px;
-    position: relative;
-  }
-  .scan-frame::before {
-    content: '';
-    position: absolute;
-    left: 0; right: 0;
-    top: 50%;
-    height: 2px;
-    background: #ff3b30;
-    transform: translateY(-50%);
-    animation: scanline 1.5s ease-in-out infinite;
-  }
-  @keyframes scanline {
-    0%, 100% { top: 20%; }
-    50% { top: 80%; }
-  }
-  #cam-placeholder {
-    width: 100%;
-    aspect-ratio: 4/3;
-    background: var(--surface2);
-    border-radius: var(--radius-sm);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: var(--text3);
-    font-size: 14px;
-    font-family: var(--mono);
-  }
+  /* Zona de escaneo con cámara en vivo */
+  #cam-section { display: flex; flex-direction: column; gap: 10px; }
+  #video-wrap { width: 100%; background: #000; border-radius: var(--radius-sm); position: relative; overflow: hidden; display: none; }
+  #video { width: 100%; height: 260px; display: block; object-fit: cover; }
+  #canvas-hidden { display: none; }
+  .scan-line-anim { position: absolute; left: 8%; right: 8%; height: 2px; background: #ff3b30; top: 40%; animation: sweep 1.8s ease-in-out infinite; pointer-events: none; }
+  @keyframes sweep { 0%,100% { top: 20%; } 50% { top: 75%; } }
+  .cam-frame { position: absolute; left: 8%; right: 8%; top: 15%; bottom: 15%; border: 2px solid rgba(255,255,255,0.6); border-radius: 6px; pointer-events: none; }
+
+  #cam-placeholder { width: 100%; min-height: 140px; background: var(--surface2); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text3); font-size: 14px; font-family: var(--mono); }
   #cam-placeholder i { font-size: 36px; }
 
-  /* Botones */
-  .btn {
-    width: 100%;
-    padding: 13px 16px;
-    border-radius: var(--radius-sm);
-    font-size: 15px;
-    font-family: 'Georgia', serif;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 0.5px solid var(--border2);
-    transition: opacity 0.15s, transform 0.1s;
-    -webkit-tap-highlight-color: transparent;
-  }
+  .btn { width: 100%; padding: 13px 16px; border-radius: var(--radius-sm); font-size: 15px; font-family: 'Georgia', serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0.5px solid var(--border2); transition: opacity 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
   .btn:active { transform: scale(0.98); opacity: 0.85; }
   .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn-cam-stop { background: var(--surface2); color: var(--text); }
+  .btn-secondary { background: var(--surface2); color: var(--text); }
   .btn-send { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
   .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
 
-  /* Manual */
-  .manual-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--border); }
-  .manual-row input {
-    flex: 1;
-    border: 0.5px solid var(--border2);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    font-family: var(--mono);
-    font-size: 14px;
-    background: var(--surface);
-    color: var(--text);
-    outline: none;
-  }
-  .manual-row input:focus { border-color: var(--accent); }
-  .btn-add {
-    background: var(--accent-light);
-    border: 0.5px solid var(--accent);
-    color: var(--accent-text);
-    border-radius: var(--radius-sm);
-    padding: 10px 16px;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btn-add:active { opacity: 0.7; }
+  /* Escáner foto (fallback) */
+  #file-input { display: none; }
+  .scan-status { text-align: center; font-family: var(--mono); font-size: 13px; padding: 8px; border-radius: var(--radius-sm); }
+  .scan-status.ok { background: var(--accent-light); color: var(--accent-text); }
+  .scan-status.err { background: var(--danger-light); color: var(--danger); }
 
-  /* Stats */
+  .manual-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--border); }
+  .manual-row input { flex: 1; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--mono); font-size: 14px; background: var(--surface); color: var(--text); outline: none; }
+  .manual-row input:focus { border-color: var(--accent); }
+  .btn-add { background: var(--accent-light); border: 0.5px solid var(--accent); color: var(--accent-text); border-radius: var(--radius-sm); padding: 10px 16px; font-size: 20px; cursor: pointer; display: flex; align-items: center; -webkit-tap-highlight-color: transparent; }
+
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .stat {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-    text-align: center;
-  }
+  .stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px; text-align: center; }
   .stat-num { font-size: 28px; color: var(--accent); }
   .stat-label { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; letter-spacing: 0.04em; }
 
-  /* Lista */
   .list-wrap { max-height: 280px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .scan-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 0;
-    border-bottom: 0.5px solid var(--border);
-    animation: fadeIn 0.2s ease;
-  }
+  .scan-item { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 0.5px solid var(--border); animation: fadeIn 0.2s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   .scan-item:last-child { border-bottom: none; }
   .item-num { font-size: 11px; color: var(--text3); min-width: 22px; font-family: var(--mono); }
   .item-code { flex: 1; font-size: 13px; font-family: var(--mono); color: var(--text); word-break: break-all; }
-  .item-del {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--text3);
-    font-size: 18px;
-    padding: 4px 6px;
-    border-radius: 4px;
-    -webkit-tap-highlight-color: transparent;
-    display: flex;
-    align-items: center;
-  }
+  .item-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 18px; padding: 4px 6px; border-radius: 4px; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; }
   .item-del:active { color: var(--danger); background: var(--danger-light); }
-
-  .empty {
-    text-align: center;
-    padding: 2rem 1rem;
-    color: var(--text3);
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-  }
+  .empty { text-align: center; padding: 2rem 1rem; color: var(--text3); font-family: var(--mono); font-size: 13px; line-height: 1.6; }
   .empty i { font-size: 32px; display: block; margin-bottom: 8px; }
 
-  /* Correo fijo */
-  .email-chip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--accent-light);
-    border: 0.5px solid rgba(26,92,58,0.25);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--accent-text);
-    margin-bottom: 12px;
-  }
+  .email-chip { display: flex; align-items: center; gap: 8px; background: var(--accent-light); border: 0.5px solid rgba(26,92,58,0.25); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--mono); font-size: 13px; color: var(--accent-text); margin-bottom: 12px; }
 
-  /* Toast */
-  #toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(8px);
-    background: var(--accent);
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 100px;
-    font-size: 14px;
-    font-family: var(--mono);
-    opacity: 0;
-    transition: opacity 0.25s, transform 0.25s;
-    pointer-events: none;
-    white-space: nowrap;
-    z-index: 999;
-    max-width: 90vw;
-    text-align: center;
-  }
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-family: var(--mono); opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; white-space: nowrap; z-index: 999; max-width: 90vw; text-align: center; }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-  input[type=number]::-webkit-inner-spin-button,
-  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .mode-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab { flex: 1; padding: 8px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: 13px; font-family: var(--mono); cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent; }
+  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   input[type=number] { -moz-appearance: textfield; }
 </style>
 </head>
 <body>
-
 <header>
   <h1><i class="ti ti-scan"></i> Escaneo de Pedidos</h1>
   <p>MODERNA MÉXICO — SURTIDO</p>
@@ -332,7 +110,6 @@
 
 <div class="main">
 
-  <!-- Pedido -->
   <div class="card">
     <p class="card-title">Número de pedido</p>
     <div class="pedido-row">
@@ -341,66 +118,75 @@
     </div>
   </div>
 
-  <!-- Cámara -->
   <div class="card">
-    <p class="card-title">Escáner de cámara</p>
-    <div id="video-wrap">
-      <video id="video" autoplay playsinline muted></video>
-      <div class="scan-overlay"><div class="scan-frame"></div></div>
+    <p class="card-title">Escáner</p>
+    <div class="mode-tabs">
+      <div class="tab active" id="tab-live" onclick="setMode('live')"><i class="ti ti-video"></i> Cámara en vivo</div>
+      <div class="tab" id="tab-photo" onclick="setMode('photo')"><i class="ti ti-camera"></i> Foto</div>
     </div>
-    <div id="cam-placeholder">
-      <i class="ti ti-camera-off"></i>
-      Cámara inactiva
+
+    <div id="cam-section">
+      <!-- MODO EN VIVO -->
+      <div id="live-section">
+        <div id="video-wrap">
+          <video id="video" autoplay playsinline muted webkit-playsinline></video>
+          <canvas id="canvas-hidden"></canvas>
+          <div class="cam-frame"></div>
+          <div class="scan-line-anim"></div>
+        </div>
+        <div id="cam-placeholder">
+          <i class="ti ti-camera-off"></i>
+          Toca "Activar" para iniciar
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+          <button class="btn btn-primary" id="btn-cam" onclick="toggleCamera()">
+            <i class="ti ti-camera"></i> Activar cámara
+          </button>
+          <button class="btn btn-secondary" id="btn-switch" onclick="switchCam()" style="display:none;">
+            <i class="ti ti-camera-rotate"></i> Cambiar cámara
+          </button>
+        </div>
+      </div>
+
+      <!-- MODO FOTO -->
+      <div id="photo-section" style="display:none;">
+        <input type="file" id="file-input" accept="image/*" capture="environment" onchange="processPhoto(this)" />
+        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+          <i class="ti ti-camera"></i> Tomar foto del código
+        </button>
+        <div id="scan-status" style="display:none; margin-top:8px;"></div>
+        <div id="photo-preview" style="margin-top:8px; display:none;">
+          <img id="preview-img" style="width:100%; border-radius:var(--radius-sm);" />
+        </div>
+      </div>
     </div>
-    <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
-      <button class="btn btn-primary" id="btn-cam" onclick="toggleCamera()">
-        <i class="ti ti-camera"></i> Activar cámara
-      </button>
-      <button class="btn btn-cam-stop" id="btn-switch" onclick="switchCamera()" style="display:none;">
-        <i class="ti ti-camera-rotate"></i> Cambiar cámara
-      </button>
-    </div>
+
     <div class="manual-row">
-      <input type="text" id="manual-code" placeholder="O escribe el código aquí..." inputmode="text" />
-      <button class="btn-add" onclick="addManual()" aria-label="Agregar código">
+      <input type="text" id="manual-code" placeholder="O escribe el código aquí..." />
+      <button class="btn-add" onclick="addManual()" aria-label="Agregar">
         <i class="ti ti-plus"></i>
       </button>
     </div>
   </div>
 
-  <!-- Stats -->
   <div class="stats">
-    <div class="stat">
-      <div class="stat-num" id="count-total">0</div>
-      <div class="stat-label">PIEZAS</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="count-unique">0</div>
-      <div class="stat-label">PRODUCTOS ÚNICOS</div>
-    </div>
+    <div class="stat"><div class="stat-num" id="count-total">0</div><div class="stat-label">PIEZAS</div></div>
+    <div class="stat"><div class="stat-num" id="count-unique">0</div><div class="stat-label">PRODUCTOS ÚNICOS</div></div>
   </div>
 
-  <!-- Lista -->
   <div class="card">
     <p class="card-title">Códigos capturados</p>
     <div class="list-wrap" id="scan-list">
-      <div class="empty">
-        <i class="ti ti-barcode"></i>
-        Sin escaneos aún.<br>Activa la cámara o usa<br>el campo manual.
-      </div>
+      <div class="empty"><i class="ti ti-barcode"></i>Sin escaneos aún.<br>Activa la cámara o usa<br>el campo manual.</div>
     </div>
     <button class="btn btn-danger" id="btn-clear" onclick="clearAll()" style="margin-top:12px;display:none;">
       <i class="ti ti-trash"></i> Limpiar todo
     </button>
   </div>
 
-  <!-- Envío -->
   <div class="card">
     <p class="card-title">Envío por correo</p>
-    <div class="email-chip">
-      <i class="ti ti-mail" style="font-size:16px;"></i>
-      surtido.mexico@moderna.com
-    </div>
+    <div class="email-chip"><i class="ti ti-mail" style="font-size:16px;"></i> surtido.mexico@moderna.com</div>
     <button class="btn btn-send" id="btn-send" onclick="sendEmail()" disabled>
       <i class="ti ti-mail-forward"></i> Enviar Excel por correo
     </button>
@@ -410,246 +196,237 @@
   </div>
 
 </div>
-
 <div id="toast"></div>
 
 <script>
-  const DEST = 'surtido.mexico@moderna.com';
-  const PREFIX = 'BMXK';
+const DEST = 'surtido.mexico@moderna.com';
+const PREFIX = 'BMXK';
+let scans = [];
+let stream = null;
+let scanning = false;
+let lastCode = '';
+let lastCodeTime = 0;
+let allCams = [];
+let camIdx = 0;
+let mode = 'live';
+let zxingReader = null;
 
-  let scans = [];
-  let stream = null;
-  let scanning = false;
-  let lastCode = '';
-  let lastCodeTime = 0;
+function getPedido() {
+  const n = document.getElementById('pedido-num').value.trim();
+  return PREFIX + (n || '?????');
+}
 
-  function getPedido() {
-    const n = document.getElementById('pedido-num').value.trim();
-    return PREFIX + (n || '?????');
+function toast(msg, ms = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('tab-live').className = 'tab' + (m === 'live' ? ' active' : '');
+  document.getElementById('tab-photo').className = 'tab' + (m === 'photo' ? ' active' : '');
+  document.getElementById('live-section').style.display = m === 'live' ? '' : 'none';
+  document.getElementById('photo-section').style.display = m === 'photo' ? '' : 'none';
+  if (m === 'photo' && stream) {
+    stopCam();
+  }
+}
+
+// ── MODO EN VIVO ──────────────────────────────────────────────
+async function toggleCamera() {
+  if (stream) { stopCam(); return; }
+  toast('Iniciando cámara...', 1500);
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    allCams = devs.filter(d => d.kind === 'videoinput');
+    allCams.sort((a,b) => /back|rear|env|tras/i.test(b.label) - /back|rear|env|tras/i.test(a.label));
+  } catch(e) { allCams = []; }
+
+  const tries = [];
+  if (allCams.length > 0) tries.push({ video: { deviceId: { exact: allCams[0].deviceId } } });
+  tries.push({ video: { facingMode: { exact: 'environment' } } });
+  tries.push({ video: { facingMode: 'environment' } });
+  tries.push({ video: true });
+
+  for (const c of tries) {
+    try { stream = await navigator.mediaDevices.getUserMedia(c); break; }
+    catch(e) { stream = null; }
   }
 
-  function toast(msg, ms = 2200) {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(el._t);
-    el._t = setTimeout(() => el.classList.remove('show'), ms);
-  }
+  if (!stream) { toast('No se pudo acceder a la cámara — usa Foto o campo manual', 4000); return; }
 
-  function addCode(code) {
-    code = (code || '').trim();
-    if (!code) return;
-    const now = Date.now();
-    if (code === lastCode && now - lastCodeTime < 1500) return;
-    lastCode = code;
-    lastCodeTime = now;
-    scans.push(code);
-    render();
-    toast('✓  ' + code);
-  }
+  const vid = document.getElementById('video');
+  const wrap = document.getElementById('video-wrap');
+  const ph = document.getElementById('cam-placeholder');
+  const btn = document.getElementById('btn-cam');
+  const btnSw = document.getElementById('btn-switch');
 
-  function addManual() {
-    const inp = document.getElementById('manual-code');
-    addCode(inp.value);
-    inp.value = '';
-    inp.focus();
-  }
+  vid.srcObject = stream;
+  vid.muted = true;
+  vid.playsInline = true;
 
-  document.getElementById('manual-code').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addManual();
-  });
+  wrap.style.display = 'block';
+  ph.style.display = 'none';
+  btn.innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
+  btn.className = 'btn btn-secondary';
+  if (allCams.length > 1) btnSw.style.display = '';
 
-  function deleteCode(i) {
-    scans.splice(i, 1);
-    render();
-  }
+  vid.onloadedmetadata = () => {
+    vid.play().catch(() => {});
+    scanning = true;
+    scanLoop(vid);
+  };
+}
 
-  function clearAll() {
-    if (!confirm('¿Borrar todos los códigos escaneados?')) return;
-    scans = [];
-    lastCode = '';
-    render();
-  }
+function stopCam() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  scanning = false;
+  document.getElementById('video-wrap').style.display = 'none';
+  document.getElementById('cam-placeholder').style.display = '';
+  document.getElementById('btn-cam').innerHTML = '<i class="ti ti-camera"></i> Activar cámara';
+  document.getElementById('btn-cam').className = 'btn btn-primary';
+  document.getElementById('btn-switch').style.display = 'none';
+}
 
-  function render() {
-    const list = document.getElementById('scan-list');
-    const btnClear = document.getElementById('btn-clear');
-    const btnSend = document.getElementById('btn-send');
-    document.getElementById('count-total').textContent = scans.length;
-    document.getElementById('count-unique').textContent = new Set(scans).size;
-    btnSend.disabled = scans.length === 0;
-    btnClear.style.display = scans.length ? '' : 'none';
-    if (scans.length === 0) {
-      list.innerHTML = '<div class="empty"><i class="ti ti-barcode"></i>Sin escaneos aún.<br>Activa la cámara o usa<br>el campo manual.</div>';
-      return;
-    }
-    list.innerHTML = [...scans].reverse().map((c, ri) => {
-      const i = scans.length - 1 - ri;
-      return `<div class="scan-item">
-        <span class="item-num">${i + 1}</span>
-        <span class="item-code">${c}</span>
-        <button class="item-del" onclick="deleteCode(${i})" aria-label="Eliminar"><i class="ti ti-x"></i></button>
-      </div>`;
-    }).join('');
-  }
-
-  let allCameras = [];
-  let currentCamIdx = 0;
-
-  async function loadCameras() {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      allCameras = devices.filter(d => d.kind === 'videoinput');
-      // Preferir cámara trasera primero
-      allCameras.sort((a, b) => {
-        const aBack = /back|rear|environment|trasera/i.test(a.label);
-        const bBack = /back|rear|environment|trasera/i.test(b.label);
-        return bBack - aBack;
-      });
-    } catch { allCameras = []; }
-  }
-
-  async function startStream(deviceId) {
-    const constraints = deviceId
-      ? { video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
-      : { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
-    return await navigator.mediaDevices.getUserMedia(constraints);
-  }
-
-  async function toggleCamera() {
-    const btn = document.getElementById('btn-cam');
-    const btnSwitch = document.getElementById('btn-switch');
-    const vw = document.getElementById('video-wrap');
-    const ph = document.getElementById('cam-placeholder');
-
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      stream = null; scanning = false;
-      vw.style.display = 'none'; ph.style.display = '';
-      btn.className = 'btn btn-primary';
-      btn.innerHTML = '<i class="ti ti-camera"></i> Activar cámara';
-      if (btnSwitch) btnSwitch.style.display = 'none';
-      return;
-    }
-
-    toast('Iniciando cámara...', 1500);
-    await loadCameras();
-
-    // Intentar primero con deviceId específico, luego fallbacks
-    let started = false;
-    const attempts = [];
-
-    if (allCameras.length > 0) {
-      attempts.push(() => startStream(allCameras[0].deviceId));
-    }
-    attempts.push(() => startStream(null)); // facingMode environment
-    attempts.push(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }));
-    attempts.push(() => navigator.mediaDevices.getUserMedia({ video: true })); // cualquier cámara
-
-    for (const attempt of attempts) {
-      try {
-        stream = await attempt();
-        started = true;
-        break;
-      } catch (e) { stream = null; }
-    }
-
-    if (!started) {
-      toast('Sin acceso a cámara — usa el campo manual', 3500);
-      return;
-    }
-
+async function switchCam() {
+  if (!allCams.length) return;
+  camIdx = (camIdx + 1) % allCams.length;
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; scanning = false; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: allCams[camIdx].deviceId } } });
     const vid = document.getElementById('video');
     vid.srcObject = stream;
-    await vid.play().catch(() => {});
-    vw.style.display = ''; ph.style.display = 'none';
-    btn.className = 'btn btn-cam-stop';
-    btn.innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
+    vid.onloadedmetadata = () => { vid.play().catch(()=>{}); scanning = true; scanLoop(vid); };
+    toast('Cámara ' + (camIdx + 1) + ' de ' + allCams.length, 1500);
+  } catch { toast('No se pudo cambiar de cámara', 2000); }
+}
 
-    if (allCameras.length > 1 && btnSwitch) btnSwitch.style.display = '';
-
-    scanning = true;
-    detect(vid);
+function scanLoop(vid) {
+  if (!('BarcodeDetector' in window)) {
+    toast('Este navegador no detecta códigos en vivo — usa modo Foto', 4000);
+    return;
   }
-
-  async function switchCamera() {
-    if (!stream || allCameras.length < 2) return;
-    currentCamIdx = (currentCamIdx + 1) % allCameras.length;
-    stream.getTracks().forEach(t => t.stop());
-    stream = null; scanning = false;
-    try {
-      stream = await startStream(allCameras[currentCamIdx].deviceId);
-      const vid = document.getElementById('video');
-      vid.srcObject = stream;
-      vid.muted = true;
-      try { await vid.play(); } catch(e) {}
-      vid.style.display = 'none';
-      vid.offsetHeight;
-      vid.style.display = 'block';
-      scanning = true;
-      detect(vid);
-      const label = allCameras[currentCamIdx].label || `Cámara ${currentCamIdx + 1}`;
-      toast('↺ ' + label.substring(0, 30), 2000);
-    } catch {
-      toast('No se pudo cambiar de cámara', 2500);
+  const det = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf','data_matrix','qr_code','codabar'] });
+  const cvs = document.createElement('canvas');
+  const ctx = cvs.getContext('2d');
+  (async function loop() {
+    if (!scanning) return;
+    if (vid.readyState >= 2 && vid.videoWidth > 0) {
+      cvs.width = vid.videoWidth; cvs.height = vid.videoHeight;
+      ctx.drawImage(vid, 0, 0);
+      try { const r = await det.detect(cvs); if (r.length) addCode(r[0].rawValue); } catch {}
     }
-  }
+    setTimeout(() => requestAnimationFrame(loop), 100);
+  })();
+}
 
-  function detect(vid) {
-    if (!('BarcodeDetector' in window)) {
-      toast('Navegador sin detector nativo — usa el campo manual', 4000);
-      return;
-    }
-    const det = new BarcodeDetector({
-      formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf','data_matrix','qr_code','codabar']
-    });
-    const cvs = document.createElement('canvas');
-    const ctx = cvs.getContext('2d');
-    (async function loop() {
-      if (!scanning) return;
-      if (vid.readyState >= 2) {
-        cvs.width = vid.videoWidth; cvs.height = vid.videoHeight;
-        ctx.drawImage(vid, 0, 0);
-        try {
-          const r = await det.detect(cvs);
-          if (r.length) addCode(r[0].rawValue);
-        } catch {}
+// ── MODO FOTO ─────────────────────────────────────────────────
+async function processPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('scan-status');
+  const preview = document.getElementById('photo-preview');
+  const img = document.getElementById('preview-img');
+
+  const url = URL.createObjectURL(file);
+  img.src = url;
+  preview.style.display = '';
+  status.style.display = '';
+  status.className = 'scan-status';
+  status.textContent = 'Leyendo código...';
+
+  try {
+    if ('BarcodeDetector' in window) {
+      const det = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf','data_matrix','qr_code','codabar'] });
+      const bitmap = await createImageBitmap(file);
+      const results = await det.detect(bitmap);
+      if (results.length > 0) {
+        addCode(results[0].rawValue);
+        status.className = 'scan-status ok';
+        status.textContent = '✓ Código leído: ' + results[0].rawValue;
+      } else {
+        status.className = 'scan-status err';
+        status.textContent = '✗ No se detectó código — intenta otra foto';
       }
-      requestAnimationFrame(loop);
-    })();
+    } else {
+      status.className = 'scan-status err';
+      status.textContent = '✗ Escribe el código manualmente abajo';
+    }
+  } catch(e) {
+    status.className = 'scan-status err';
+    status.textContent = '✗ Error al leer — intenta de nuevo';
   }
+  input.value = '';
+}
 
-  function sendEmail() {
-    const pedido = getPedido();
-    const fecha = new Date().toLocaleDateString('es-MX');
-    const fechaFile = new Date().toISOString().slice(0, 10);
-
-    const ws = XLSX.utils.aoa_to_sheet([['CODIGO'], ...scans.map(c => [c])]);
-    ws['!cols'] = [{ wch: 32 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Escaneos');
-    const bytes = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const fname = `Escaneo_${pedido}_${fechaFile}.xlsx`;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = fname;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    const subj = encodeURIComponent(`Escaneo pedido ${pedido} — ${fecha}`);
-    const body = encodeURIComponent(
-      `Hola,\n\nSe adjunta el archivo de escaneo del pedido ${pedido}.\n\n` +
-      `Piezas totales escaneadas: ${scans.length}\n` +
-      `Productos únicos: ${new Set(scans).size}\n\n` +
-      `Archivo adjunto: ${fname}\n` +
-      `(Adjuntar el archivo antes de enviar)\n\nSaludos`
-    );
-    setTimeout(() => { window.location.href = `mailto:${DEST}?subject=${subj}&body=${body}`; }, 700);
-    toast('Descargando archivo — adjúntalo al correo', 3500);
-  }
-
+// ── LISTA ─────────────────────────────────────────────────────
+function addCode(code) {
+  code = (code || '').trim();
+  if (!code) return;
+  const now = Date.now();
+  if (code === lastCode && now - lastCodeTime < 1500) return;
+  lastCode = code; lastCodeTime = now;
+  scans.push(code);
   render();
+  toast('✓  ' + code);
+}
+
+function addManual() {
+  const inp = document.getElementById('manual-code');
+  addCode(inp.value); inp.value = ''; inp.focus();
+}
+document.getElementById('manual-code').addEventListener('keydown', e => { if (e.key === 'Enter') addManual(); });
+
+function deleteCode(i) { scans.splice(i, 1); render(); }
+
+function clearAll() {
+  if (!confirm('¿Borrar todos los códigos escaneados?')) return;
+  scans = []; lastCode = ''; render();
+}
+
+function render() {
+  const list = document.getElementById('scan-list');
+  document.getElementById('count-total').textContent = scans.length;
+  document.getElementById('count-unique').textContent = new Set(scans).size;
+  document.getElementById('btn-send').disabled = scans.length === 0;
+  document.getElementById('btn-clear').style.display = scans.length ? '' : 'none';
+  if (!scans.length) {
+    list.innerHTML = '<div class="empty"><i class="ti ti-barcode"></i>Sin escaneos aún.<br>Activa la cámara o usa<br>el campo manual.</div>';
+    return;
+  }
+  list.innerHTML = [...scans].reverse().map((c, ri) => {
+    const i = scans.length - 1 - ri;
+    return `<div class="scan-item"><span class="item-num">${i+1}</span><span class="item-code">${c}</span><button class="item-del" onclick="deleteCode(${i})"><i class="ti ti-x"></i></button></div>`;
+  }).join('');
+}
+
+// ── ENVÍO ─────────────────────────────────────────────────────
+function sendEmail() {
+  const pedido = getPedido();
+  const fecha = new Date().toLocaleDateString('es-MX');
+  const fechaFile = new Date().toISOString().slice(0,10);
+  const ws = XLSX.utils.aoa_to_sheet([['CODIGO'], ...scans.map(c => [c])]);
+  ws['!cols'] = [{ wch: 32 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Escaneos');
+  const bytes = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const fname = `Escaneo_${pedido}_${fechaFile}.xlsx`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  const subj = encodeURIComponent(`Escaneo pedido ${pedido} — ${fecha}`);
+  const body = encodeURIComponent(`Hola,\n\nSe adjunta el archivo de escaneo del pedido ${pedido}.\n\nPiezas totales: ${scans.length}\nProductos únicos: ${new Set(scans).size}\n\nArchivo: ${fname}\n(Adjuntar el archivo antes de enviar)\n\nSaludos`);
+  setTimeout(() => { window.location.href = `mailto:${DEST}?subject=${subj}&body=${body}`; }, 700);
+  toast('Descargando archivo — adjúntalo al correo', 3500);
+}
+
+render();
 </script>
 </body>
 </html>
