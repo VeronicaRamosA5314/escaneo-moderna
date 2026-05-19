@@ -236,26 +236,42 @@ let accessToken = null;
 let tokenClient = null;
 
 // ── GOOGLE IDENTITY ───────────────────────────────────────────
-window.addEventListener('load', () => {
-  if (typeof google === 'undefined') return;
+function initGoogleAuth() {
+  if (typeof google === 'undefined') {
+    setTimeout(initGoogleAuth, 500);
+    return;
+  }
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
     callback: (resp) => {
-      if (resp.error) { showDriveStatus('Error al iniciar sesión: ' + resp.error, 'err'); return; }
+      if (resp.error) {
+        showDriveStatus('Error al iniciar sesión: ' + resp.error, 'err');
+        return;
+      }
       accessToken = resp.access_token;
       fetchUserInfo();
     }
   });
-});
+}
+window.addEventListener('load', initGoogleAuth);
 
 function signIn() {
-  if (!tokenClient) { showDriveStatus('Cargando Google — intenta en un momento', 'err'); return; }
-  tokenClient.requestAccessToken({ prompt: 'consent' });
+  if (!tokenClient) {
+    showDriveStatus('Google aún cargando — espera un momento e intenta de nuevo', 'err');
+    return;
+  }
+  try {
+    tokenClient.requestAccessToken({ prompt: '' });
+  } catch(e) {
+    showDriveStatus('Error al iniciar sesión: ' + e.message, 'err');
+  }
 }
 
 function signOut() {
-  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  if (accessToken) {
+    try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch {}
+  }
   accessToken = null;
   document.getElementById('drive-signin-section').style.display = '';
   document.getElementById('drive-loggedin-section').style.display = 'none';
@@ -268,13 +284,14 @@ async function fetchUserInfo() {
       headers: { Authorization: 'Bearer ' + accessToken }
     });
     const info = await r.json();
+    if (info.error) throw new Error(info.error.message);
     document.getElementById('user-email').textContent = info.email || 'Sesión iniciada';
     document.getElementById('drive-signin-section').style.display = 'none';
     document.getElementById('drive-loggedin-section').style.display = '';
     document.getElementById('btn-drive').disabled = scans.length === 0;
-    toast('✓ Sesión iniciada', 2000);
-  } catch {
-    showDriveStatus('No se pudo verificar la sesión', 'err');
+    toast('✓ Sesión iniciada como ' + (info.email || 'Google'), 2500);
+  } catch(e) {
+    showDriveStatus('No se pudo verificar la sesión: ' + e.message, 'err');
   }
 }
 
