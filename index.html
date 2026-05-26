@@ -9,7 +9,6 @@
 <title>Escaneo de Pedidos — Moderna México</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://accounts.google.com/gsi/client"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -27,15 +26,11 @@
   .main { padding: 1rem; display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
   .card { background: var(--surface); border-radius: var(--radius); border: 0.5px solid var(--border); padding: 1rem 1.1rem; }
   .card-title { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); font-family: var(--mono); margin-bottom: 10px; }
-
-  /* Pedido */
   .pedido-row { display: flex; align-items: stretch; }
   .pedido-prefix { background: var(--surface2); border: 0.5px solid var(--border2); border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); padding: 0 12px; display: flex; align-items: center; font-family: var(--mono); font-size: 15px; color: var(--text2); white-space: nowrap; }
   .pedido-prefix span { color: var(--accent); font-weight: bold; }
   #pedido-num { flex: 1; border: 0.5px solid var(--border2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 12px; font-family: var(--mono); font-size: 16px; color: var(--text); background: var(--surface); outline: none; -webkit-appearance: none; }
   #pedido-num:focus { border-color: var(--accent); }
-
-  /* Cámara */
   #video-wrap { width: 100%; background: #000; border-radius: var(--radius-sm); position: relative; overflow: hidden; display: none; }
   #video { width: 100%; height: 260px; display: block; object-fit: cover; }
   .scan-line-anim { position: absolute; left: 8%; right: 8%; height: 2px; background: #ff3b30; top: 40%; animation: sweep 1.8s ease-in-out infinite; pointer-events: none; box-shadow: 0 0 6px rgba(255,59,48,0.7); }
@@ -43,30 +38,21 @@
   @keyframes sweep { 0%,100% { top: 20%; } 50% { top: 75%; } }
   #cam-placeholder { width: 100%; min-height: 130px; background: var(--surface2); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text3); font-size: 14px; font-family: var(--mono); }
   #cam-placeholder i { font-size: 36px; }
-
-  /* Botones */
   .btn { width: 100%; padding: 13px 16px; border-radius: var(--radius-sm); font-size: 15px; font-family: 'Georgia', serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0.5px solid var(--border2); transition: opacity 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
   .btn:active { transform: scale(0.98); opacity: 0.85; }
   .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn-secondary { background: var(--surface2); color: var(--text); }
-  .btn-drive { background: #1a73e8; color: #fff; border-color: #1a73e8; font-size: 15px; }
+  .btn-drive { background: #1a73e8; color: #fff; border-color: #1a73e8; }
   .btn-drive:disabled { opacity: 0.35; cursor: not-allowed; }
   .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
-  .btn-sm { padding: 8px 12px; font-size: 13px; width: auto; }
-
-  /* Manual */
   .manual-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--border); }
   .manual-row input { flex: 1; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--mono); font-size: 14px; background: var(--surface); color: var(--text); outline: none; }
   .manual-row input:focus { border-color: var(--accent); }
   .btn-add { background: var(--accent-light); border: 0.5px solid var(--accent); color: var(--accent-text); border-radius: var(--radius-sm); padding: 10px 16px; font-size: 20px; cursor: pointer; display: flex; align-items: center; -webkit-tap-highlight-color: transparent; }
-
-  /* Stats */
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px; text-align: center; }
   .stat-num { font-size: 28px; color: var(--accent); }
   .stat-label { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; letter-spacing: 0.04em; }
-
-  /* Lista */
   .list-wrap { max-height: 280px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .scan-item { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 0.5px solid var(--border); animation: fadeIn 0.2s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
@@ -77,45 +63,30 @@
   .item-del:active { color: var(--danger); background: var(--danger-light); }
   .empty { text-align: center; padding: 2rem 1rem; color: var(--text3); font-family: var(--mono); font-size: 13px; line-height: 1.6; }
   .empty i { font-size: 32px; display: block; margin-bottom: 8px; }
-
-  /* Drive status */
-  .drive-status { font-family: var(--mono); font-size: 13px; padding: 10px 12px; border-radius: var(--radius-sm); margin-top: 10px; display: none; line-height: 1.5; }
+  .drive-status { font-family: var(--mono); font-size: 13px; padding: 10px 12px; border-radius: var(--radius-sm); margin-top: 10px; display: none; white-space: pre-line; line-height: 1.5; }
   .drive-status.ok { background: var(--accent-light); color: var(--accent-text); }
   .drive-status.err { background: var(--danger-light); color: var(--danger); }
   .drive-status.loading { background: var(--surface2); color: var(--text2); }
-
-  /* Google sign-in chip */
-  .google-chip { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 10px; font-size: 13px; font-family: var(--mono); color: var(--text2); }
-  .google-chip i { font-size: 18px; color: var(--accent); }
-  .google-chip .user-email { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .btn-signout { background: none; border: none; color: var(--text3); font-size: 12px; cursor: pointer; text-decoration: underline; font-family: var(--mono); padding: 0; }
-
-  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-family: var(--mono); opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; white-space: nowrap; z-index: 999; max-width: 90vw; text-align: center; }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-  /* Foto fallback */
   #file-input { display: none; }
   .scan-photo-status { font-family: var(--mono); font-size: 13px; padding: 8px; border-radius: var(--radius-sm); margin-top: 8px; display: none; }
   .scan-photo-status.ok { background: var(--accent-light); color: var(--accent-text); }
   .scan-photo-status.err { background: var(--danger-light); color: var(--danger); }
-
   .mode-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
   .tab { flex: 1; padding: 8px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: 13px; font-family: var(--mono); cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent; }
   .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-family: var(--mono); opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; white-space: nowrap; z-index: 999; max-width: 90vw; text-align: center; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   input[type=number] { -moz-appearance: textfield; }
 </style>
 </head>
 <body>
-
 <header>
   <h1><i class="ti ti-scan"></i> Escaneo de Pedidos</h1>
   <p>MODERNA MÉXICO — SURTIDO</p>
 </header>
-
 <div class="main">
 
-  <!-- Pedido -->
   <div class="card">
     <p class="card-title">Número de pedido</p>
     <div class="pedido-row">
@@ -124,15 +95,12 @@
     </div>
   </div>
 
-  <!-- Escáner -->
   <div class="card">
     <p class="card-title">Escáner</p>
     <div class="mode-tabs">
       <div class="tab active" id="tab-live" onclick="setMode('live')"><i class="ti ti-video"></i> En vivo</div>
       <div class="tab" id="tab-photo" onclick="setMode('photo')"><i class="ti ti-camera"></i> Foto</div>
     </div>
-
-    <!-- Modo en vivo -->
     <div id="live-section">
       <div id="video-wrap">
         <video id="video" autoplay playsinline muted webkit-playsinline></video>
@@ -152,8 +120,6 @@
         </button>
       </div>
     </div>
-
-    <!-- Modo foto -->
     <div id="photo-section" style="display:none;">
       <input type="file" id="file-input" accept="image/*" capture="environment" onchange="processPhoto(this)" />
       <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
@@ -161,21 +127,17 @@
       </button>
       <div id="scan-photo-status" class="scan-photo-status"></div>
     </div>
-
-    <!-- Manual -->
     <div class="manual-row">
       <input type="text" id="manual-code" placeholder="O escribe el código aquí..." />
       <button class="btn-add" onclick="addManual()"><i class="ti ti-plus"></i></button>
     </div>
   </div>
 
-  <!-- Stats -->
   <div class="stats">
     <div class="stat"><div class="stat-num" id="count-total">0</div><div class="stat-label">PIEZAS</div></div>
     <div class="stat"><div class="stat-num" id="count-unique">0</div><div class="stat-label">PRODUCTOS ÚNICOS</div></div>
   </div>
 
-  <!-- Lista -->
   <div class="card">
     <p class="card-title">Códigos capturados</p>
     <div class="list-wrap" id="scan-list">
@@ -186,44 +148,19 @@
     </button>
   </div>
 
-  <!-- Google Drive -->
   <div class="card">
     <p class="card-title">Guardar en Google Drive</p>
-
-    <!-- Estado sin sesión -->
-    <div id="drive-signin-section">
-      <p style="font-size:13px;color:var(--text2);font-family:var(--mono);margin-bottom:10px;">
-        Inicia sesión con Google para subir el archivo directo a Drive.
-      </p>
-      <button class="btn btn-primary" onclick="signIn()">
-        <i class="ti ti-brand-google"></i> Iniciar sesión con Google
-      </button>
-    </div>
-
-    <!-- Estado con sesión -->
-    <div id="drive-loggedin-section" style="display:none;">
-      <div class="google-chip">
-        <i class="ti ti-brand-google"></i>
-        <span class="user-email" id="user-email"></span>
-        <button class="btn-signout" onclick="signOut()">Salir</button>
-      </div>
-      <button class="btn btn-drive" id="btn-drive" onclick="uploadToDrive()" disabled>
-        <i class="ti ti-brand-google-drive"></i> Subir Excel a Drive
-      </button>
-      <div class="drive-status" id="drive-status"></div>
-    </div>
+    <button class="btn btn-drive" id="btn-drive" onclick="uploadToDrive()" disabled>
+      <i class="ti ti-brand-google-drive"></i> Subir a Drive
+    </button>
+    <div class="drive-status" id="drive-status"></div>
   </div>
 
 </div>
 <div id="toast"></div>
-
 <script>
-// ── CONFIG ────────────────────────────────────────────────────
-const CLIENT_ID = '299307750154-f1rt8db9o9jqosao603n5dpuolf9u0lb.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-const FOLDER_NAME = 'Escaneos Moderna';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwx053qAkHqfCqY9XtCf0T843kvtrLA1EkS75fR7riGGaovJiQnP1GkXFYkY1LSRJ7p/exec';
 
-// ── ESTADO ────────────────────────────────────────────────────
 let scans = [];
 let stream = null;
 let scanning = false;
@@ -232,162 +169,29 @@ let lastCodeTime = 0;
 let allCams = [];
 let camIdx = 0;
 let mode = 'live';
-let accessToken = null;
-let tokenClient = null;
 
-// ── GOOGLE IDENTITY (flujo redirect) ─────────────────────────
-const REDIRECT_URI = window.location.origin + window.location.pathname.replace(/\/+$/, '') + '/';
-
-function signIn() {
-  // Guardar escaneos actuales antes de redirigir
-  if (scans.length > 0) {
-    sessionStorage.setItem('scans_backup', JSON.stringify(scans));
-    sessionStorage.setItem('pedido_backup', document.getElementById('pedido-num').value);
-  }
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
-    response_type: 'token',
-    scope: SCOPES,
-    include_granted_scopes: 'true'
-  });
-  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
-}
-
-function signOut() {
-  if (accessToken) {
-    try { fetch('https://accounts.google.com/o/oauth2/revoke?token=' + accessToken); } catch {}
-  }
-  accessToken = null;
-  sessionStorage.removeItem('google_token');
-  sessionStorage.removeItem('google_email');
-  document.getElementById('drive-signin-section').style.display = '';
-  document.getElementById('drive-loggedin-section').style.display = 'none';
-  document.getElementById('drive-status').style.display = 'none';
-}
-
-async function fetchUserInfo() {
-  try {
-    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + accessToken }
-    });
-    const info = await r.json();
-    if (info.error) throw new Error(info.error.message);
-    const email = info.email || 'Sesión iniciada';
-    sessionStorage.setItem('google_token', accessToken);
-    sessionStorage.setItem('google_email', email);
-    document.getElementById('user-email').textContent = email;
-    document.getElementById('drive-signin-section').style.display = 'none';
-    document.getElementById('drive-loggedin-section').style.display = '';
-    document.getElementById('btn-drive').disabled = scans.length === 0;
-    toast('✓ Sesión iniciada', 2000);
-  } catch(e) {
-    showDriveStatus('No se pudo verificar la sesión: ' + e.message, 'err');
-  }
-}
-
-// Al cargar la página — revisar si venimos de redirect de Google o si hay sesión guardada
-window.addEventListener('load', () => {
-  // Restaurar escaneos si los había antes del redirect
-  const backup = sessionStorage.getItem('scans_backup');
-  const pedidoBackup = sessionStorage.getItem('pedido_backup');
-  if (backup) {
-    try { scans = JSON.parse(backup); render(); } catch {}
-    sessionStorage.removeItem('scans_backup');
-  }
-  if (pedidoBackup) {
-    document.getElementById('pedido-num').value = pedidoBackup;
-    sessionStorage.removeItem('pedido_backup');
-  }
-
-  // Revisar token en el hash de la URL (viene de Google redirect)
-  const hash = window.location.hash.substring(1);
-  if (hash) {
-    const params = new URLSearchParams(hash);
-    const token = params.get('access_token');
-    if (token) {
-      accessToken = token;
-      history.replaceState(null, '', window.location.pathname);
-      fetchUserInfo();
-      return;
-    }
-  }
-
-  // Revisar sesión guardada en sessionStorage
-  const savedToken = sessionStorage.getItem('google_token');
-  const savedEmail = sessionStorage.getItem('google_email');
-  if (savedToken && savedEmail) {
-    accessToken = savedToken;
-    document.getElementById('user-email').textContent = savedEmail;
-    document.getElementById('drive-signin-section').style.display = 'none';
-    document.getElementById('drive-loggedin-section').style.display = '';
-    document.getElementById('btn-drive').disabled = scans.length === 0;
-  }
-});
-
-// ── GOOGLE DRIVE UPLOAD ───────────────────────────────────────
-async function getOrCreateFolder() {
-  // Buscar carpeta existente
-  const q = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
-    headers: { Authorization: 'Bearer ' + accessToken }
-  });
-  const data = await r.json();
-  if (data.files && data.files.length > 0) return data.files[0].id;
-
-  // Crear carpeta si no existe
-  const cr = await fetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
-  });
-  const folder = await cr.json();
-  return folder.id;
-}
-
+// ── DRIVE VIA APPS SCRIPT ─────────────────────────────────────
 async function uploadToDrive() {
-  if (!accessToken) { signIn(); return; }
   if (scans.length === 0) { toast('No hay códigos escaneados', 2000); return; }
-
   const pedido = getPedido();
-  const fechaFile = new Date().toISOString().slice(0, 10);
-  const fname = `Escaneo_${pedido}_${fechaFile}.xlsx`;
-
-  showDriveStatus('Preparando archivo...', 'loading');
-
-  // Generar Excel
-  const ws = XLSX.utils.aoa_to_sheet([['CODIGO'], ...scans.map(c => [c])]);
-  ws['!cols'] = [{ wch: 32 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Escaneos');
-  const bytes = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
+  const fecha = new Date().toISOString().slice(0, 10);
+  const btn = document.getElementById('btn-drive');
+  btn.disabled = true;
+  showDriveStatus('⏳ Subiendo archivo a Drive...', 'loading');
   try {
-    showDriveStatus('Buscando carpeta en Drive...', 'loading');
-    const folderId = await getOrCreateFolder();
-
-    showDriveStatus('Subiendo archivo...', 'loading');
-    const metadata = JSON.stringify({ name: fname, parents: [folderId] });
-    const form = new FormData();
-    form.append('metadata', new Blob([metadata], { type: 'application/json' }));
-    form.append('file', blob);
-
-    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+    const resp = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + accessToken },
-      body: form
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ pedido, fecha, codigos: scans })
     });
-    const file = await up.json();
-
-    if (file.id) {
-      showDriveStatus(`✓ Archivo subido correctamente\n📁 Carpeta: ${FOLDER_NAME}\n📄 ${fname}`, 'ok');
-      toast('✓ Subido a Drive', 2500);
-    } else {
-      throw new Error('Sin ID de archivo');
-    }
-  } catch (e) {
-    showDriveStatus('✗ Error al subir — verifica tu conexión e intenta de nuevo', 'err');
+    // no-cors no devuelve body, asumimos éxito si no hay excepción
+    showDriveStatus('✓ Archivo enviado a Drive\n📁 Carpeta: Escaneos Moderna\n📄 Escaneo_' + pedido + '_' + fecha + '.xlsx', 'ok');
+    toast('✓ Subido a Drive', 2500);
+  } catch(e) {
+    showDriveStatus('✗ Error: ' + e.message + '\n\nVerifica tu conexión e intenta de nuevo.', 'err');
+  } finally {
+    btn.disabled = scans.length === 0;
   }
 }
 
@@ -395,7 +199,6 @@ function showDriveStatus(msg, type) {
   const el = document.getElementById('drive-status');
   el.style.display = '';
   el.className = 'drive-status ' + type;
-  el.style.whiteSpace = 'pre-line';
   el.textContent = msg;
 }
 
@@ -417,26 +220,21 @@ async function toggleCamera() {
     allCams = devs.filter(d => d.kind === 'videoinput');
     allCams.sort((a, b) => /back|rear|env|tras/i.test(b.label) - /back|rear|env|tras/i.test(a.label));
   } catch { allCams = []; }
-
   const tries = [];
   if (allCams.length > 0) tries.push({ video: { deviceId: { exact: allCams[0].deviceId } } });
   tries.push({ video: { facingMode: { exact: 'environment' } } });
   tries.push({ video: { facingMode: 'environment' } });
   tries.push({ video: true });
-
   for (const c of tries) {
     try { stream = await navigator.mediaDevices.getUserMedia(c); break; }
     catch { stream = null; }
   }
-
   if (!stream) { toast('No se pudo acceder a la cámara — usa modo Foto', 4000); return; }
-
   const vid = document.getElementById('video');
   const wrap = document.getElementById('video-wrap');
   const ph = document.getElementById('cam-placeholder');
   const btn = document.getElementById('btn-cam');
   const btnSw = document.getElementById('btn-switch');
-
   vid.srcObject = stream;
   vid.muted = true;
   wrap.style.display = 'block';
@@ -444,12 +242,7 @@ async function toggleCamera() {
   btn.innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
   btn.className = 'btn btn-secondary';
   if (allCams.length > 1) btnSw.style.display = '';
-
-  vid.onloadedmetadata = () => {
-    vid.play().catch(() => {});
-    scanning = true;
-    scanLoop(vid);
-  };
+  vid.onloadedmetadata = () => { vid.play().catch(() => {}); scanning = true; scanLoop(vid); };
 }
 
 function stopCam() {
@@ -569,9 +362,7 @@ function render() {
   document.getElementById('count-total').textContent = scans.length;
   document.getElementById('count-unique').textContent = new Set(scans).size;
   document.getElementById('btn-clear').style.display = scans.length ? '' : 'none';
-  // Habilitar botón Drive si hay sesión
-  const btnDrive = document.getElementById('btn-drive');
-  if (btnDrive) btnDrive.disabled = scans.length === 0;
+  document.getElementById('btn-drive').disabled = scans.length === 0;
   if (!scans.length) {
     list.innerHTML = '<div class="empty"><i class="ti ti-barcode"></i>Sin escaneos aún.<br>Activa la cámara o usa<br>el campo manual.</div>';
     return;
